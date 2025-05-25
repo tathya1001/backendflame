@@ -16,19 +16,28 @@ app.add_middleware(
 class Query(BaseModel):
     prompt: str
 
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
-HF_TOKEN = "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"  # 🔐 paste your token here
+HF_TOKEN = "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"  # 🔐 use your Hugging Face token
+API_URL = "https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct"
 
 @app.post("/ask")
 def ask(query: Query):
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {"inputs": query.prompt}
+    headers = {
+        "Authorization": f"Bearer {HF_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "inputs": query.prompt,
+        "options": {"wait_for_model": True}
+    }
+
     response = requests.post(API_URL, headers=headers, json=payload)
+
     if response.status_code != 200:
         return {"response": f"Error: {response.status_code} {response.text}"}
+
     result = response.json()
-    # The model usually returns a list of dicts with 'generated_text'
-    if isinstance(result, list) and "generated_text" in result[0]:
+
+    try:
         return {"response": result[0]["generated_text"]}
-    else:
+    except:
         return {"response": str(result)}
