@@ -7,7 +7,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*","http://127.0.0.1:5500"],
+    allow_origins=["*", "http://127.0.0.1:5500"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -16,8 +16,8 @@ app.add_middleware(
 class Query(BaseModel):
     prompt: str
 
-HF_TOKEN = "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"  # 🔐 use your Hugging Face token
-API_URL = "https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct"
+HF_TOKEN = "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"  # Replace with your actual token
+API_URL = "https://router.huggingface.co/together/v1/chat/completions"
 
 @app.post("/ask")
 def ask(query: Query):
@@ -26,8 +26,13 @@ def ask(query: Query):
         "Content-Type": "application/json"
     }
     payload = {
-        "inputs": query.prompt,
-        "options": {"wait_for_model": True}
+        "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+        "messages": [
+            {
+                "role": "user",
+                "content": query.prompt
+            }
+        ]
     }
 
     response = requests.post(API_URL, headers=headers, json=payload)
@@ -35,9 +40,8 @@ def ask(query: Query):
     if response.status_code != 200:
         return {"response": f"Error: {response.status_code} {response.text}"}
 
-    result = response.json()
-
     try:
-        return {"response": result[0]["generated_text"]}
-    except:
-        return {"response": str(result)}
+        result = response.json()
+        return {"response": result["choices"][0]["message"]["content"]}
+    except Exception as e:
+        return {"response": f"Failed to parse response: {str(e)}", "raw": response.text}
